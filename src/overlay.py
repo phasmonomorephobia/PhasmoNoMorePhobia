@@ -10,6 +10,8 @@ from PySide6.QtCore import (
     QObject,
     Signal,
     QTimer,
+    QAbstractNativeEventFilter,
+    QCoreApplication,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -318,6 +320,86 @@ class CaptureManager:
 
         return True
 
+# ==================================
+# Global Hotkey
+# ==================================
+
+hotkey_user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+WM_HOTKEY = 0x0312
+MOD_NOREPEAT = 0x4000
+
+VK_F8 = 0x77
+HOTKEY_ID = 1
+
+
+class NativeMSG(ctypes.Structure):
+    _fields_ = [
+        ("hwnd", wintypes.HWND),
+        ("message", wintypes.UINT),
+        ("wParam", ctypes.c_size_t),
+        ("lParam", ctypes.c_ssize_t),
+        ("time", wintypes.DWORD),
+        ("pt", wintypes.POINT),
+    ]
+
+
+hotkey_user32.RegisterHotKey.argtypes = [
+    wintypes.HWND,
+    ctypes.c_int,
+    wintypes.UINT,
+    wintypes.UINT,
+]
+hotkey_user32.RegisterHotKey.restype = wintypes.BOOL
+
+hotkey_user32.UnregisterHotKey.argtypes = [
+    wintypes.HWND,
+    ctypes.c_int,
+]
+hotkey_user32.UnregisterHotKey.restype = wintypes.BOOL
+
+
+class GlobalHotkey(QAbstractNativeEventFilter):
+
+    def __init__(self, callback):
+        super().__init__()
+
+        self.callback = callback
+        self.registered = False
+
+        self.registered = bool(
+            hotkey_user32.RegisterHotKey(
+                None,
+                HOTKEY_ID,
+                MOD_NOREPEAT,
+                VK_F8,
+            )
+        )
+
+        if not self.registered:
+            error = ctypes.get_last_error()
+            print(f"[HOTKEY] Failed to register F8! Error: {error}")
+
+    def nativeEventFilter(self, event_type, message):
+
+        msg = ctypes.cast(
+            int(message),
+            ctypes.POINTER(NativeMSG),
+        ).contents
+
+        if msg.message == WM_HOTKEY and msg.wParam == HOTKEY_ID:
+            self.callback()
+            return True, 0
+
+        return False, 0
+
+    def unregister(self):
+
+        if self.registered:
+            hotkey_user32.UnregisterHotKey(None, HOTKEY_ID)
+            self.registered = False
+            print("[HOTKEY] F8 unregistered.")
+
 
 # ============================================================
 # OVERLAY WINDOW
@@ -420,18 +502,18 @@ class OverlayWindow(QWidget):
         # Temporary Streamer Mode keybind
         # ==================================
 
-        self.streamer_shortcut = QShortcut(
-            QKeySequence("F8"),
-            self,
-        )
-
-        self.streamer_shortcut.setContext(
-            Qt.ShortcutContext.ApplicationShortcut
-        )
-
-        self.streamer_shortcut.activated.connect(
+        # Global F8 hotkey
+        self.streamer_hotkey = GlobalHotkey(
             self.toggle_streamer_mode
         )
+
+        app = QCoreApplication.instance()
+
+        if self.streamer_hotkey.registered:
+            app.installNativeEventFilter(self.streamer_hotkey)
+            app.aboutToQuit.connect(self.streamer_hotkey.unregister)
+
+            print("[HOTKEY] F8 registered globally.")
 
         # ----------------------------------------------------
         # Event update debounce
