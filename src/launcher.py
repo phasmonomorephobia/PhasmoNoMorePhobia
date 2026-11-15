@@ -522,7 +522,8 @@ class MainWindow(QMainWindow):
             self.status_label.setText("Phasmophobia detected!")
         else:
             self.status_label.setText("Waiting for Phasmophobia...")
-            self.overlay.stop()
+            if hasattr(self, "overlay"):
+                self.overlay.stop()
 
             self.launch_button.setIcon(QIcon(str(IMAGE_DIR / "launch_button.png")))
 
@@ -579,7 +580,7 @@ class MainWindow(QMainWindow):
             return
 
         # If the overlay is already running, close it
-        if self.overlay.timer.isActive():
+        if self.overlay.running:
             self.overlay.stop()
 
             self.launch_button.setIcon(
