@@ -1,9 +1,8 @@
 import sys
-
 from pathlib import Path
-
-from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QFont, QColor, QFontDatabase
+from ui.outlined_label import OutlinedLabel
+from PySide6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QFont, QColor, QFontDatabase, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -16,6 +15,59 @@ from PySide6.QtWidgets import (
     QDialog,
     QGraphicsDropShadowEffect,
 )
+
+class HoverImageButton(QPushButton):
+    def __init__(
+        self,
+        normal_size,
+        hover_size,
+        pressed_size=None,
+        parent=None
+    ):
+        super().__init__(parent)
+
+        self.normal_size = QSize(*normal_size)
+        self.hover_size = QSize(*hover_size)
+        self.pressed_size = QSize(*pressed_size) if pressed_size else QSize(
+            max(1, normal_size[0] - 3),
+            max(1, normal_size[1] - 3)
+        )
+
+        self.animation = QPropertyAnimation(self, b"iconSize", self)
+        self.animation.setDuration(160)
+        self.animation.setEasingCurve(
+            QEasingCurve.Type.OutCubic
+        )
+
+        self.setIconSize(self.normal_size)
+
+    def animate_icon(self, target_size):
+        self.animation.stop()
+        self.animation.setStartValue(self.iconSize())
+        self.animation.setEndValue(target_size)
+        self.animation.start()
+
+    def enterEvent(self, event):
+        self.animate_icon(self.hover_size)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.animate_icon(self.normal_size)
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.animate_icon(self.pressed_size)
+
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+
+        if self.underMouse():
+            self.animate_icon(self.hover_size)
+        else:
+            self.animate_icon(self.normal_size)
 
 class SettingsWindow(QDialog):
     def __init__(self, parent=None):
@@ -56,7 +108,7 @@ def load_fonts():
         / "fonts"
     )
 
-    Normal_font = font_dir / "Signika-Normal.ttf"
+    Normal_font = font_dir / "Signika-Regular.ttf"
     bold_font = font_dir / "Signika-Bold.ttf"
 
     for font_path in (Normal_font, bold_font):
@@ -68,6 +120,24 @@ def load_fonts():
             print(f"Failed to load font: {font_path}")
         else:
             print(f"Loaded font: {font_path.name}")
+
+def add_shadow(
+    widget,
+    blur=8,
+    x_offset=2,
+    y_offset=4,
+    color="#000000",
+    opacity=180
+):
+    shadow = QGraphicsDropShadowEffect(widget)
+    shadow.setBlurRadius(blur)
+    shadow.setOffset(x_offset, y_offset)
+
+    shadow_color = QColor(color)
+    shadow_color.setAlpha(opacity)
+    shadow.setColor(shadow_color)
+
+    widget.setGraphicsEffect(shadow)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -115,11 +185,27 @@ class MainWindow(QMainWindow):
         minimize_button.setFixedSize(14, 14)
         minimize_button.clicked.connect(self.showMinimized)
 
+        add_shadow(
+            minimize_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100
+        )
+
         close_button = QPushButton("X")
         close_button.setFont(QFont("Signika", 19, QFont.Weight.Normal))
         close_button.setObjectName("closeButton")
         close_button.setFixedSize(14, 14)
         close_button.clicked.connect(self.close)
+
+        add_shadow(
+            close_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100
+        )
 
         top_layout.addWidget(minimize_button)
         top_layout.addWidget(close_button)
@@ -130,24 +216,32 @@ class MainWindow(QMainWindow):
         # Application title
         # ----------------------------------
 
-        main_layout.addSpacing(38)
+        main_layout.addSpacing(30)
 
-        title = QLabel("PhasmoNoMorePhobia")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title = OutlinedLabel(
+            text="PhasmoNoMorePhobia",
+            font_size=19,
+            font_weight=QFont.Weight.Bold,
+            text_color="#FFFFFF",
+            outline_color="#000000",
+            outline_width=4
+        )
 
-        title.setFont(QFont("Signika", 19, QFont.Weight.Bold))
+        add_shadow(
+            title,
+            blur=8,
+            y_offset=4,
+            color="#000000",
+            opacity=200
+        )
+
+        title.setContentsMargins(10, 10, 10, 10)
+        title.setMinimumHeight(50)
 
         title.setStyleSheet("""
             color: white;
             background: transparent;
         """)
-
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(3)
-        shadow.setOffset(2, 2)
-        shadow.setColor(QColor(0, 0, 0, 255))
-
-        title.setGraphicsEffect(shadow)
 
         main_layout.addWidget(title)
 
@@ -155,14 +249,51 @@ class MainWindow(QMainWindow):
         # Launch button
         # ----------------------------------
 
-        main_layout.addSpacing(25)
+        main_layout.addSpacing(20)
 
-        self.launch_button = QPushButton("LAUNCH")
-        self.launch_button.setFont(QFont("Signika", 19, QFont.Weight.Bold))
+        self.launch_button = HoverImageButton(
+            normal_size=(113, 71),
+            hover_size=(119, 75),
+            pressed_size=(109, 68)
+        )
+
+        launch_image = (
+            Path(__file__).resolve().parent
+            / "assets"
+            / "images"
+            / "launch_button.png"
+        )
+
+        self.launch_button.setIcon(QIcon(str(launch_image)))
+        self.launch_button.setIconSize(QSize(113, 71))
+        self.launch_button.setFixedSize(123, 81)
         self.launch_button.setObjectName("launchButton")
-        self.launch_button.setFixedSize(114, 60)
 
         self.launch_button.clicked.connect(self.launch_game)
+
+        self.launch_button.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }
+
+            QPushButton:hover {
+                background: transparent;
+            }
+
+            QPushButton:pressed {
+                background: transparent;
+            }
+        """)
+
+        add_shadow(
+            self.launch_button,
+            blur=8,
+            y_offset=4,
+            color="#000000",
+            opacity=180
+        )
 
         launch_layout = QHBoxLayout()
         launch_layout.addStretch()
@@ -175,11 +306,24 @@ class MainWindow(QMainWindow):
         # View Mode label
         # ----------------------------------
 
-        main_layout.addSpacing(13)
+        main_layout.addSpacing(30)
 
-        view_label = QLabel("View Mode")
-        view_label.setFont(QFont("Signika", 19, QFont.Weight.Normal))
-        view_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        view_label = OutlinedLabel(
+            text="View Mode",
+            font_size=13,
+            font_weight=QFont.Weight.Normal,
+            text_color="#FFFFFF",
+            outline_color="#000000",
+            outline_width=3
+        )
+
+        add_shadow(
+            view_label,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100
+        )
 
         view_label.setStyleSheet("""
             color: white;
@@ -193,7 +337,7 @@ class MainWindow(QMainWindow):
         # View Mode dropdown
         # ----------------------------------
 
-        main_layout.addSpacing(3)
+        main_layout.addSpacing(1.5)
 
         self.view_mode = QComboBox()
         self.view_mode.setObjectName("viewMode")
@@ -203,6 +347,14 @@ class MainWindow(QMainWindow):
             "Advanced",
             "Custom"
         ])
+
+        add_shadow(
+            self.view_mode,
+            blur=8,
+            y_offset=4,
+            color="#000000",
+            opacity=180
+        )
 
         self.view_mode.setCurrentText("Simple")
         self.view_mode.setFixedSize(114, 23)
@@ -223,16 +375,53 @@ class MainWindow(QMainWindow):
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch()
 
-        self.settings_button = QPushButton("⚙")
+        self.settings_button = HoverImageButton(
+            normal_size=(42, 42),
+            hover_size=(48, 48),
+            pressed_size=(39, 39)
+        )
+
+        settings_image = (
+            Path(__file__).resolve().parent
+            / "assets"
+            / "images"
+            / "settings_button.png"
+        )
+
+        self.settings_button.setIcon(QIcon(str(settings_image)))
+        self.settings_button.setIconSize(QSize(42, 42))
         self.settings_button.setObjectName("settingsButton")
-        self.settings_button.setFixedSize(35, 35)
-        self.settings_button.setFont(QFont("Signika", 19, QFont.Weight.Normal))
+        self.settings_button.setFixedSize(50, 50)
+
+        self.settings_button.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }
+
+            QPushButton:hover {
+                background: transparent;
+            }
+
+            QPushButton:pressed {
+                background: transparent;
+            }
+        """)
 
         self.settings_button.clicked.connect(
             self.open_settings
         )
 
         bottom_layout.addWidget(self.settings_button)
+
+        add_shadow(
+            self.settings_button,
+            blur=8,
+            y_offset=4,
+            color="#000000",
+            opacity=180
+        )
 
         main_layout.addLayout(bottom_layout)
 
@@ -348,6 +537,29 @@ class MainWindow(QMainWindow):
                 padding-top: 4px;
             }
 
+            QComboBox {
+                background-color: #2B2B2B;
+                color: white;
+                border: 1px solid #555555;
+                border-radius: 4px;
+                padding: 3px 25px 3px 8px;
+                font-family: "Signika";
+                font-size: 10pt;
+            }
+
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+                width: 24px;
+                border: none;
+            }
+
+            QComboBox::down-arrow {
+                image: url("assets/images/dropdown_arrow.svg");
+                width: 16px;
+                height: 16px;
+            }
+
             QComboBox#viewMode {
                 background-color: #bdbdbd;
                 color: #111111;
@@ -356,11 +568,6 @@ class MainWindow(QMainWindow):
                 padding-left: 4px;
                 font-size: 13px;
                 font-weight: bold;
-            }
-
-            QComboBox#viewMode::drop-down {
-                border: none;
-                width: 22px;
             }
 
             QComboBox#viewMode QAbstractItemView {
