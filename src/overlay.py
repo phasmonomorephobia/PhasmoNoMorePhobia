@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 # Windows API setup
 # ==================================
 
+HIDE_ON_UNFOCUS = True
+
 user32 = ctypes.windll.user32
 
 RECT = wintypes.RECT
@@ -187,10 +189,9 @@ class OverlayWindow(QWidget):
 
     # ==================================
     # Overlay visibility
-    # ==================================
-
+    # ==================================   
+ 
     def update_overlay(self):
-
         hwnd = self.get_foreground_window()
 
         if not hwnd:
@@ -199,39 +200,53 @@ class OverlayWindow(QWidget):
 
         pid, process_name = self.get_window_process(hwnd)
 
-        # Is our launcher focused?
-        is_launcher = pid == self.launcher_pid
-
-        # Is Phasmophobia focused?
+        # Identify the focused application.
         is_game = (
             process_name is not None
-            and process_name.lower()
-            == self.game_process_name.lower()
+            and process_name.lower() == self.game_process_name.lower()
         )
 
-        # Hide if neither application is focused.
-        if not (is_launcher or is_game):
-            self.hide()
+        is_launcher = (
+            pid == self.launcher_pid
+        )
+
+        # ==================================
+        # Phasmophobia is focused.
+        # ==================================
+
+        if is_game:
+
+            if user32.IsIconic(hwnd):
+                self.hide()
+                return
+
+            geometry = self.get_window_geometry(hwnd)
+
+            if geometry is None:
+                self.hide()
+                return
+
+            x, y, width, height = geometry
+
+            self.setGeometry(x, y, width, height)
+
+            if not self.isVisible():
+                self.show()
+
+            self.raise_()
             return
 
-        # Hide if the focused window is minimized.
-        if user32.IsIconic(hwnd):
-            self.hide()
+        # ==================================
+        # PhasmoNoMorePhobia is focused.
+        # ==================================
+
+        if is_launcher:
             return
 
-        # Get the focused window's dimensions.
-        geometry = self.get_window_geometry(hwnd)
+        # ==================================
+        # Another application is focused.
+        # ==================================
 
-        if geometry is None:
+        if HIDE_ON_UNFOCUS:
             self.hide()
-            return
 
-        x, y, width, height = geometry
-
-        # Match the overlay to the focused window.
-        self.setGeometry(x, y, width, height)
-
-        if not self.isVisible():
-            self.show()
-
-        self.raise_()
