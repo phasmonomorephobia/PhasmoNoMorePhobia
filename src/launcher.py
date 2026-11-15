@@ -33,7 +33,6 @@ from PySide6.QtWidgets import (
 
 from ui.outlined_label import OutlinedLabel
 from settings import SettingsWindow
-from overlay import OverlayWindow
 
 
 # ----------------------------------
@@ -175,9 +174,10 @@ def add_shadow(
 # ----------------------------------
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, overlay_manager):
         super().__init__()
 
+        self.overlay_manager = overlay_manager
         self.drag_position = None
 
         self.setWindowTitle("PhasmoNoMorePhobia")
@@ -193,8 +193,6 @@ class MainWindow(QMainWindow):
         )
 
         self.create_interface()
-
-        self.overlay = OverlayWindow()
 
     def create_interface(self):
 
@@ -523,7 +521,7 @@ class MainWindow(QMainWindow):
         else:
             self.status_label.setText("Waiting for Phasmophobia...")
             if hasattr(self, "overlay"):
-                self.overlay.stop()
+                self.overlay_manager.stop()
 
             self.launch_button.setIcon(QIcon(str(IMAGE_DIR / "launch_button.png")))
 
@@ -570,7 +568,7 @@ class MainWindow(QMainWindow):
     def launch_game(self):
         # Check whether Phasmophobia is running
         if not self.is_game_running():
-            self.overlay.stop()
+            self.overlay_manager.stop()
 
             self.launch_button.setIcon(
                 QIcon(str(IMAGE_DIR / "launch_button.png"))
@@ -580,8 +578,8 @@ class MainWindow(QMainWindow):
             return
 
         # If the overlay is already running, close it
-        if self.overlay.running:
-            self.overlay.stop()
+        if self.overlay_manager.running:
+            self.overlay_manager.stop()
 
             self.launch_button.setIcon(
                 QIcon(str(IMAGE_DIR / "launch_button.png"))
@@ -591,7 +589,7 @@ class MainWindow(QMainWindow):
 
         # Otherwise, start the overlay
         else:
-            self.overlay.start()
+            self.overlay_manager.start()
 
             self.launch_button.setIcon(
                 QIcon(str(IMAGE_DIR / "close_button.png"))
@@ -601,7 +599,7 @@ class MainWindow(QMainWindow):
 
     
     def closeEvent(self, event):
-        self.overlay.stop()
+        self.overlay_manager.stop()
         super().closeEvent(event)
 
     def open_settings(self):

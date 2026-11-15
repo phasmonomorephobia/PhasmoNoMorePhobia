@@ -1,24 +1,52 @@
+
 import sys
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont
 
 from launcher import MainWindow, load_fonts
+from overlay import OverlayManager
+from hotkeys import HotkeyManager
 
 
-def main():
-    app = QApplication(sys.argv)
+app = QApplication(sys.argv)
 
-    app.setApplicationName("PhasmoNoMorePhobia")
+# Load font
+load_fonts()
 
-    load_fonts()
-    app.setFont(QFont("Signika", 10))
+# ----------------------------------
+# Create managers
+# ----------------------------------
 
-    window = MainWindow()
-    window.show()
+overlay_manager = OverlayManager()
+hotkey_manager = HotkeyManager()
 
-    sys.exit(app.exec())
+# ----------------------------------
+# Connect global hotkeys
+# ----------------------------------
 
+hotkey_manager.bind(
+    "toggle_streamer_mode",
+    overlay_manager.toggle_streamer_mode,
+)
 
-if __name__ == "__main__":
-    main()
+# ----------------------------------
+# Create launcher
+# ----------------------------------
+
+launcher = MainWindow(overlay_manager)
+launcher.show()
+
+# ----------------------------------
+# Start global hotkeys
+# ----------------------------------
+
+hotkey_manager.start()
+
+# ----------------------------------
+# Cleanup
+# ----------------------------------
+
+app.aboutToQuit.connect(overlay_manager.stop)
+app.aboutToQuit.connect(hotkey_manager.stop)
+
+sys.exit(app.exec())
