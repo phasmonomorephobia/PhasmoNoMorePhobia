@@ -3,5 +3,9 @@
     "toggle_streamer_mode": {
         "key": "F8",
         "enabled": true
+    },
+    "toggle_overlay": {
+        "key": "F9",
+        "enabled": true
     }
 }

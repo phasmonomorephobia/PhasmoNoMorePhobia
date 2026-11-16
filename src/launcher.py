@@ -517,7 +517,10 @@ class MainWindow(QMainWindow):
         game_running = self.is_game_running()
 
         if game_running:
-            self.status_label.setText("Phasmophobia detected!")
+            if self.overlay_manager.running:
+                self.status_label.setText("Overlay active!")
+            else:
+                self.status_label.setText("Phasmophobia detected!")
         else:
             self.status_label.setText("Waiting for Phasmophobia...")
             if hasattr(self, "overlay"):
@@ -566,36 +569,7 @@ class MainWindow(QMainWindow):
 
     
     def launch_game(self):
-        # Check whether Phasmophobia is running
-        if not self.is_game_running():
-            self.overlay_manager.stop()
-
-            self.launch_button.setIcon(
-                QIcon(str(IMAGE_DIR / "launch_button.png"))
-            )
-
-            self.status_label.setText("Waiting for Phasmophobia...")
-            return
-
-        # If the overlay is already running, close it
-        if self.overlay_manager.running:
-            self.overlay_manager.stop()
-
-            self.launch_button.setIcon(
-                QIcon(str(IMAGE_DIR / "launch_button.png"))
-            )
-
-            self.status_label.setText("Phasmophobia detected!")
-
-        # Otherwise, start the overlay
-        else:
-            self.overlay_manager.start()
-
-            self.launch_button.setIcon(
-                QIcon(str(IMAGE_DIR / "close_button.png"))
-            )
-
-            self.status_label.setText("Overlay active")
+        self.toggle_overlay()
 
     
     def closeEvent(self, event):
@@ -635,6 +609,39 @@ class MainWindow(QMainWindow):
     def mouseReleaseEvent(self, event):
         self.drag_position = None
         super().mouseReleaseEvent(event)
+
+    def toggle_overlay(self):
+        # Check whether Phasmophobia is running
+        if not self.is_game_running():
+            self.overlay_manager.stop()
+
+            self.launch_button.setIcon(
+                QIcon(str(IMAGE_DIR / "launch_button.png"))
+            )
+
+            self.status_label.setText("Waiting for Phasmophobia...")
+            return
+
+        # If the overlay is running, stop it
+        if self.overlay_manager.running:
+            self.overlay_manager.stop()
+
+            self.launch_button.setIcon(
+                QIcon(str(IMAGE_DIR / "launch_button.png"))
+            )
+
+            self.status_label.setText("Phasmophobia detected!")
+
+        # Otherwise, start it
+        else:
+            self.overlay_manager.start()
+
+            self.launch_button.setIcon(
+                QIcon(str(IMAGE_DIR / "close_button.png"))
+            )
+
+            self.status_label.setText("Overlay active")
+
 
     # ----------------------------------
     # Application styling

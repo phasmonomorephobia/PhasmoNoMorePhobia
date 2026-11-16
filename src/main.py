@@ -23,17 +23,21 @@ hotkey_manager = HotkeyManager()
 # ----------------------------------
 # Connect global hotkeys
 # ----------------------------------
+launcher = MainWindow(overlay_manager)
 
 hotkey_manager.bind(
     "toggle_streamer_mode",
     overlay_manager.toggle_streamer_mode,
 )
 
+hotkey_manager.bind(
+    "toggle_overlay",
+    launcher.toggle_overlay,
+)
+
 # ----------------------------------
 # Create launcher
 # ----------------------------------
-
-launcher = MainWindow(overlay_manager)
 launcher.show()
 
 # ----------------------------------
