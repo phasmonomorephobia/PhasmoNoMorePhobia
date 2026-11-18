@@ -29,11 +29,18 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QGraphicsDropShadowEffect,
     QGridLayout,
+    QSystemTrayIcon,
+    QMenu,
 )
 
 from ui.outlined_label import OutlinedLabel
-from settings import SettingsWindow
+from settings.settings import SettingsWindow
 
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+    "PhasmoNoMorePhobia"
+)
+
+HIDE_IN_TRAY_ON_CLOSE = True
 
 # ----------------------------------
 # Asset paths
@@ -177,8 +184,47 @@ class MainWindow(QMainWindow):
     def __init__(self, overlay_manager):
         super().__init__()
 
+        # Application icon
+        app_icon = QIcon(str(IMAGE_DIR / "logo.png"))
+
+        self.setWindowIcon(app_icon)
+
+        app = QApplication.instance()
+        if app:
+            app.setWindowIcon(app_icon)
+
         self.overlay_manager = overlay_manager
         self.drag_position = None
+
+        # ----------------------------------
+        # System tray
+        # ----------------------------------
+
+        self.tray_icon = QSystemTrayIcon(self)
+
+        self.tray_icon.setIcon(app_icon)
+        self.tray_icon.setToolTip("PhasmoNoMorePhobia")
+
+        tray_menu = QMenu()
+
+        open_action = tray_menu.addAction("Open")
+        open_action.triggered.connect(self.restore_from_tray)
+
+        settings_action = tray_menu.addAction("Open Setings")
+        settings_action.triggered.connect(self.open_settings)
+
+        tray_menu.addSeparator()
+
+        exit_action = tray_menu.addAction("Exit")
+        exit_action.triggered.connect(QApplication.quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+
+        self.tray_icon.activated.connect(
+            self.on_tray_icon_activated
+        )
+
+        self.tray_icon.show()
 
         self.setWindowTitle("PhasmoNoMorePhobia")
         self.setFixedSize(335, 284)
@@ -573,8 +619,15 @@ class MainWindow(QMainWindow):
 
     
     def closeEvent(self, event):
+        if HIDE_IN_TRAY_ON_CLOSE:
+            event.ignore()
+            self.hide()
+            return
+
+        self.tray_icon.hide()
         self.overlay_manager.stop()
-        super().closeEvent(event)
+
+        event.accept()
 
     def open_settings(self):
         self.settings_window = SettingsWindow(self)
@@ -609,6 +662,14 @@ class MainWindow(QMainWindow):
     def mouseReleaseEvent(self, event):
         self.drag_position = None
         super().mouseReleaseEvent(event)
+
+    def restore_from_tray(self):
+        self.showNormal()
+        self.activateWindow()
+
+    def on_tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.restore_from_tray()
 
     def toggle_overlay(self):
         # Check whether Phasmophobia is running
