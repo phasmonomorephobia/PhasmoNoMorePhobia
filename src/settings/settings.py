@@ -1,4 +1,5 @@
 from pathlib import Path
+from ui.outlined_label import OutlinedLabel
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import (
@@ -9,6 +10,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QCheckBox,
     QWidget,
+    QGraphicsDropShadowEffect,
 )
 
 
@@ -85,6 +87,12 @@ class SettingsWindow(QDialog):
         self.background = QWidget(self)
         self.background.setObjectName("background")
 
+        shadow = QGraphicsDropShadowEffect(self.background)
+        shadow.setBlurRadius(20)
+        shadow.setColor(Qt.GlobalColor.black)
+        shadow.setOffset(0, 0)
+        self.background.setGraphicsEffect(shadow)
+
         self.background.setStyleSheet("""
             QWidget#background {
                 background-color: #303030;
@@ -96,41 +104,50 @@ class SettingsWindow(QDialog):
         main_layout.setContentsMargins(10, 8, 10, 10)
         main_layout.setSpacing(9)
 
-        self.background.setGeometry(self.rect())
+        self.background.setGeometry(self.rect().adjusted(10, 10, -10, -10))
 
         # ==================================
         # Header
         # ==================================
 
         self.header = QWidget()
+        self.header.setFixedHeight(32)
 
         header_layout = QHBoxLayout(self.header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(5)
 
-        self.title = QLabel("Settings")
+        self.title = OutlinedLabel("Settings", 
+        font_size=22, 
+        outline_width=3, 
+        alignment=Qt.AlignmentFlag.AlignLeft,
+        shadow=True,
+        shadow_blur=5,
+        shadow_offset=(0,2),
+        )
+        self.title.setFixedHeight(32)
         self.title.setStyleSheet("""
             font-size: 22px;
             font-weight: bold;
             font-family: "Signika";
         """)
 
-        header_layout.addWidget(self.title)
+        header_layout.addWidget(self.title, alignment=Qt.AlignmentFlag.AlignVCenter)
         header_layout.addStretch()
 
         # ----------------------------------
         # Minimize button
         # ----------------------------------
 
-        self.minimize_button = QPushButton("−")
-        self.minimize_button.setFixedSize(12, 12)
+        self.minimize_button = QPushButton("-")
+        self.minimize_button.setFixedSize(14, 14)
 
         self.minimize_button.setStyleSheet("""
             QPushButton {
                 background-color: #ff5722;
                 color: #303030;
                 border-radius: 6px;
-                font-size: 10px;
+                font-size: 13px;
                 font-family: "Signika";
             }
         """)
@@ -141,15 +158,15 @@ class SettingsWindow(QDialog):
         # Close button
         # ----------------------------------
 
-        self.close_button = QPushButton("×")
-        self.close_button.setFixedSize(12, 12)
+        self.close_button = QPushButton("X")
+        self.close_button.setFixedSize(14, 14)
 
         self.close_button.setStyleSheet("""
             QPushButton {
                 background-color: #ff2222;
                 color: #303030;
                 border-radius: 6px;
-                font-size: 11px;
+                font-size: 13px;
                 font-family: "Signika";
             }
         """)
@@ -160,16 +177,20 @@ class SettingsWindow(QDialog):
         # Add buttons
         # ----------------------------------
 
-        header_layout.addWidget(self.minimize_button)
-        header_layout.addWidget(self.close_button)
-
         main_layout.addWidget(self.header)
+
+        # Individual button positioning
+        self.minimize_button.setParent(self.header)
+        self.close_button.setParent(self.header)
+
+        self.minimize_button.move(178, 4)
+        self.close_button.move(195, 4)
 
         # ==================================
         # Setting Row Helper
         # ==================================
 
-        def create_setting(title_text, description_text, control):
+        def create_setting(title_text, description_text, control, font_size=15, desc_font_size=13):
 
             row = QWidget()
             row_layout = QHBoxLayout(row)
@@ -180,16 +201,28 @@ class SettingsWindow(QDialog):
             text_layout = QVBoxLayout()
             text_layout.setSpacing(0)
 
-            title_label = QLabel(title_text)
-            title_label.setStyleSheet("""
-                font-size: 17px;
-                font-weight: bold;
-                font-family: "Signika";
-            """)
+            title_label = OutlinedLabel(
+                title_text,
+                font_size=font_size,
+                outline_width=2,
+                alignment=Qt.AlignmentFlag.AlignLeft,
+                shadow=True,
+                shadow_blur=5,
+                shadow_offset=(0,2),
+                )
 
-            description_label = QLabel(description_text)
+            description_label = OutlinedLabel(
+                description_text,
+                font_size=desc_font_size,
+                font_weight=QFont.Weight.Normal,
+                text_color="#bbbbbb",
+                outline_width=1.5,
+                alignment=Qt.AlignmentFlag.AlignLeft,
+                shadow=True,
+                shadow_blur=5,
+                shadow_offset=(0,2),
+                )
             description_label.setStyleSheet("""
-                font-size: 7px;
                 font-family: "Signika";
                 color: #bbbbbb;
             """)
@@ -235,8 +268,9 @@ class SettingsWindow(QDialog):
 
         main_layout.addWidget(create_setting(
             "Streamer Mode",
-            "*Hides the overlay in recordings or streams",
-            self.streamer_mode
+            "*Hides overlay in recordings",
+            self.streamer_mode,
+            desc_font_size=8.5
         ))
 
         # ==================================
@@ -248,8 +282,9 @@ class SettingsWindow(QDialog):
 
         main_layout.addWidget(create_setting(
             "Toggle Overlay",
-            "*This keybind will toggle the overlay when pressed",
-            self.toggle_overlay_key
+            "*Toggles the overlay",
+            self.toggle_overlay_key,
+            desc_font_size=10
         ))
 
         # ==================================
@@ -261,8 +296,9 @@ class SettingsWindow(QDialog):
 
         main_layout.addWidget(create_setting(
             "Open Settings",
-            "*This keybind opens this window when pressed",
-            self.open_settings_key
+            "*Opens this window",
+            self.open_settings_key,
+            desc_font_size=10
         ))
 
         # ==================================
@@ -274,8 +310,10 @@ class SettingsWindow(QDialog):
 
         main_layout.addWidget(create_setting(
             "Open Game Settings",
-            "*This keybind opens the Game Settings window",
-            self.open_game_settings_key
+            "*Opens Game Settings window",
+            self.open_game_settings_key,
+            font_size=13,
+            desc_font_size=8
         ))
 
         # ==================================
@@ -354,5 +392,5 @@ class SettingsWindow(QDialog):
         super().mouseReleaseEvent(event)
     
     def resizeEvent(self, event):
-        self.background.setGeometry(self.rect())
+        self.background.setGeometry(self.rect().adjusted(10, 10, -10, -10))
         super().resizeEvent(event)

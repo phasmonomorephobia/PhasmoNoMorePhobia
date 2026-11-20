@@ -1,5 +1,5 @@
 
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QGraphicsDropShadowEffect
 from PySide6.QtGui import (
     QPainter,
     QPainterPath,
@@ -20,7 +20,12 @@ class OutlinedLabel(QLabel):
         text_color="#FFFFFF",
         outline_color="#000000",
         outline_width=2,
-        parent=None
+        alignment=Qt.AlignmentFlag.AlignCenter,
+        parent=None,
+        shadow=False,
+        shadow_color="#000000",
+        shadow_blur=5,
+        shadow_offset=(1, 2),
     ):
         super().__init__(text, parent)
 
@@ -31,11 +36,19 @@ class OutlinedLabel(QLabel):
         self.setFont(
             QFont("Signika", font_size, font_weight)
         )
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setAlignment(alignment)
 
         # Leave room for the outline around the text
         margin = int(outline_width + 2)
         self.setContentsMargins(margin, margin, margin, margin)
+
+        self.shadow = None
+        if shadow:
+            self.shadow = QGraphicsDropShadowEffect(self)
+            self.shadow.setColor(QColor(shadow_color))
+            self.shadow.setBlurRadius(shadow_blur)
+            self.shadow.setOffset(*shadow_offset)
+            self.setGraphicsEffect(self.shadow)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -48,15 +61,21 @@ class OutlinedLabel(QLabel):
         text = self.text()
         bounds = metrics.tightBoundingRect(text)
 
-        # Center the actual glyph bounds, accounting for their offsets
-        x = (
-            (self.width() - bounds.width()) / 2
-            - bounds.left()
-        )
-        y = (
-            (self.height() - bounds.height()) / 2
-            - bounds.top()
-        )
+        # Calculate horizontal position
+        if self.alignment() & Qt.AlignmentFlag.AlignRight:
+            x = self.width() - bounds.width() - bounds.left()
+        elif self.alignment() & Qt.AlignmentFlag.AlignHCenter:
+            x = (self.width() - bounds.width()) / 2 - bounds.left()
+        else:
+            x = -bounds.left()
+
+        # Calculate vertical position
+        if self.alignment() & Qt.AlignmentFlag.AlignBottom:
+            y = self.height() - bounds.height() - bounds.top()
+        elif self.alignment() & Qt.AlignmentFlag.AlignVCenter:
+            y = (self.height() - bounds.height()) / 2 - bounds.top()
+        else:
+            y = -bounds.top()
 
         path = QPainterPath()
         path.addText(x, y, font, text)
