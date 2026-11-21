@@ -40,7 +40,7 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
     "PhasmoNoMorePhobia"
 )
 
-HIDE_IN_TRAY_ON_CLOSE = True
+HIDE_IN_TRAY_ON_CLOSE = False
 
 # ----------------------------------
 # Asset paths
@@ -190,8 +190,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(app_icon)
 
         app = QApplication.instance()
-        if app:
-            app.setWindowIcon(app_icon)
+        app.setWindowIcon(app_icon)
 
         self.overlay_manager = overlay_manager
         self.drag_position = None

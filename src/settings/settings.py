@@ -1,7 +1,9 @@
 from pathlib import Path
 from ui.outlined_label import OutlinedLabel
+from ui.toggle_switch import ToggleSwitch
+from ui.keybind import KeybindButton
 from PySide6.QtCore import Qt, QEvent
-from PySide6.QtGui import QFontDatabase, QFont
+from PySide6.QtGui import QFontDatabase, QFont, QColor
 from PySide6.QtWidgets import (
     QDialog,
     QLabel,
@@ -12,6 +14,28 @@ from PySide6.QtWidgets import (
     QWidget,
     QGraphicsDropShadowEffect,
 )
+
+# ----------------------------------
+# Drop shadow helper
+# ----------------------------------
+
+def add_shadow(
+    widget,
+    blur=8,
+    x_offset=2,
+    y_offset=4,
+    color="#000000",
+    opacity=180,
+):
+    shadow = QGraphicsDropShadowEffect(widget)
+    shadow.setBlurRadius(blur)
+    shadow.setOffset(x_offset, y_offset)
+
+    shadow_color = QColor(color)
+    shadow_color.setAlpha(opacity)
+    shadow.setColor(shadow_color)
+
+    widget.setGraphicsEffect(shadow)
 
 
 class SettingsWindow(QDialog):
@@ -46,7 +70,7 @@ class SettingsWindow(QDialog):
         # ==================================
 
         self.setWindowTitle("Settings")
-        self.setFixedSize(250, 347)
+        self.setFixedSize(270, 450)
         self.drag_position = None
 
         self.setWindowFlags(
@@ -150,7 +174,18 @@ class SettingsWindow(QDialog):
                 font-size: 13px;
                 font-family: "Signika";
             }
+
+            QPushButton:hover {
+                background-color: #ff9b36;
+            }
         """)
+        add_shadow(
+            self.minimize_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100,
+            )
 
         self.minimize_button.clicked.connect(self.showMinimized)
 
@@ -169,7 +204,18 @@ class SettingsWindow(QDialog):
                 font-size: 13px;
                 font-family: "Signika";
             }
+
+            QPushButton:hover {
+                background-color: #ff5555;
+            }
         """)
+        add_shadow(
+            self.close_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100,
+        )
 
         self.close_button.clicked.connect(self.close)
 
@@ -183,8 +229,8 @@ class SettingsWindow(QDialog):
         self.minimize_button.setParent(self.header)
         self.close_button.setParent(self.header)
 
-        self.minimize_button.move(178, 4)
-        self.close_button.move(195, 4)
+        self.minimize_button.move(198, 4)
+        self.close_button.move(215, 4)
 
         # ==================================
         # Setting Row Helper
@@ -240,45 +286,36 @@ class SettingsWindow(QDialog):
         # Streamer Mode
         # ==================================
 
-        self.streamer_mode = QCheckBox()
-        self.streamer_mode.setChecked(True)
-        self.streamer_mode.setFixedSize(46, 27)
-
-        self.streamer_mode.setStyleSheet("""
-            QCheckBox {
-                background-color: #dddddd;
-                border-radius: 6px;
-            }
-
-            QCheckBox::indicator {
-                width: 23px;
-                height: 23px;
-                border-radius: 5px;
-                background-color: #eeeeee;
-            }
-
-            QCheckBox::indicator:checked {
-                background-color: #39ed45;
-            }
-
-            QCheckBox::indicator:unchecked {
-                background-color: #eeeeee;
-            }
-        """)
+        self.streamer_mode = ToggleSwitch()
+        self.streamer_mode.setChecked(False)
 
         main_layout.addWidget(create_setting(
             "Streamer Mode",
             "*Hides overlay in recordings",
             self.streamer_mode,
-            desc_font_size=8.5
+            desc_font_size=8.5,
         ))
 
         # ==================================
         # Toggle Overlay
         # ==================================
 
-        self.toggle_overlay_key = QPushButton("H")
-        self.toggle_overlay_key.setFixedSize(50, 30)
+        self.hide_on_close = ToggleSwitch()
+        self.hide_on_close.setChecked(False)
+
+        main_layout.addWidget(create_setting(
+            "Hide In Tray On Close",
+            "*Launcher appears in tray when closed",
+            self.hide_on_close,
+            font_size=12.5,
+            desc_font_size=6,
+        ))
+
+        # ==================================
+        # Toggle Overlay
+        # ==================================
+
+        self.toggle_overlay_key = KeybindButton("H")
 
         main_layout.addWidget(create_setting(
             "Toggle Overlay",
@@ -291,8 +328,7 @@ class SettingsWindow(QDialog):
         # Open Settings
         # ==================================
 
-        self.open_settings_key = QPushButton("I")
-        self.open_settings_key.setFixedSize(50, 30)
+        self.open_settings_key = KeybindButton("I")
 
         main_layout.addWidget(create_setting(
             "Open Settings",
@@ -305,8 +341,7 @@ class SettingsWindow(QDialog):
         # Open Game Settings
         # ==================================
 
-        self.open_game_settings_key = QPushButton("O")
-        self.open_game_settings_key.setFixedSize(50, 30)
+        self.open_game_settings_key = KeybindButton("O")
 
         main_layout.addWidget(create_setting(
             "Open Game Settings",
@@ -340,8 +375,53 @@ class SettingsWindow(QDialog):
             }
         """)
 
+        add_shadow(
+            self.game_settings_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100
+        )
+
         main_layout.addWidget(
             self.game_settings_button,
+            alignment=Qt.AlignmentFlag.AlignHCenter
+        )
+
+        # ==================================
+        # Game Settings Button
+        # ==================================
+
+        main_layout.addSpacing(1)
+
+        self.customize_view_button = QPushButton("Customize View")
+        self.customize_view_button.setFixedSize(175, 34)
+
+        self.customize_view_button.setStyleSheet("""
+            QPushButton {
+                background-color: #171717;
+                color: white;
+                border-radius: 5px;
+                font-size: 19px;
+                font-weight: bold;
+                font-family: "Signika";
+            }
+
+            QPushButton:hover {
+                background-color: #222222;
+            }
+        """)
+
+        add_shadow(
+            self.customize_view_button,
+            blur=8,
+            y_offset=2,
+            color="#000000",
+            opacity=100
+        )
+
+        main_layout.addWidget(
+            self.customize_view_button,
             alignment=Qt.AlignmentFlag.AlignHCenter
         )
 
